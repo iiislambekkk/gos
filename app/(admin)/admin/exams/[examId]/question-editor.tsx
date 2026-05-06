@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Question, Answer } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,9 +12,18 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Save, AlertTriangle, ChevronRight } from "lucide-react";
+import { Trash2, Save, AlertTriangle, ChevronRight, Eye, Code, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import { MilkdownEditor } from "@/components/milkdown-editor";
+import { Textarea } from "@/components/ui/textarea";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import Mermaid from "@/components/mermaid";
 
 type QuestionWithAnswer = Question & {
     answer: Answer | null;
@@ -28,6 +37,7 @@ interface LevelConfig {
     icon: string;
     label: string;
     placeholder: string;
+    isMermaid?: boolean;
 }
 
 const levelConfigs: Record<string, LevelConfig> = {
@@ -37,7 +47,7 @@ const levelConfigs: Record<string, LevelConfig> = {
     eliStudent: { icon: "🎓", label: "Студентке",         placeholder: "Терминдермен, құрылымды түрде..."         },
     eliExpert:  { icon: "💼", label: "Сарапшыға",         placeholder: "Толық техникалық жауап..."               },
     analogy:    { icon: "🎭", label: "Өмірден мысал",     placeholder: "Мысалы, бұл ұқсас..."                    },
-    diagram:    { icon: "📊", label: "Схема (Mermaid)",   placeholder: "Mermaid синтаксисімен диаграмма..."       },
+    diagram:    { icon: "📊", label: "Схема (Mermaid)",   placeholder: "graph TD\n  A[Бастау] --> B{Шешім}\n  B --> C[Нәтиже]", isMermaid: true },
 };
 
 export function QuestionEditor({
@@ -65,11 +75,16 @@ export function QuestionEditor({
     const [expandedLevel, setExpandedLevel]     = useState<string | null>("summary");
     const [saving, setSaving]                   = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [previewOpen, setPreviewOpen]         = useState(false);
+    const [diagramError, setDiagramError]       = useState<string | null>(null);
 
     const filledCount = Object.values(fields).filter(v => v.trim().length > 0).length;
 
     const updateField = (key: string, value: string) => {
         setFields((prev) => ({ ...prev, [key]: value }));
+        if (key === 'diagram') {
+            setDiagramError(null);
+        }
     };
 
     async function saveQuestion() {
@@ -90,6 +105,10 @@ export function QuestionEditor({
             setSaving(false);
         }
     }
+
+    const handleDiagramError = (error: string) => {
+        setDiagramError(error);
+    };
 
     return (
         <div className="space-y-6">
@@ -169,21 +188,141 @@ export function QuestionEditor({
                                         <span className="text-base">{config.icon}</span>
                                         <span className="font-medium text-sm">{config.label}</span>
                                     </div>
-                                    {hasContent ? (
-                                        <Badge variant="secondary" className="text-xs">✓ Толтырылған</Badge>
-                                    ) : (
-                                        <Badge variant="outline" className="text-xs text-muted-foreground">Бос</Badge>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {hasContent && (
+                                            <Badge variant="secondary" className="text-xs">✓ Толтырылған</Badge>
+                                        )}
+                                        {!hasContent && (
+                                            <Badge variant="outline" className="text-xs text-muted-foreground">Бос</Badge>
+                                        )}
+                                    </div>
                                 </button>
 
                                 {isExpanded && (
                                     <div className="px-4 pb-4">
-                                        <MilkdownEditor
-                                            value={value}
-                                            onChange={(v) => updateField(key, v)}
-                                            placeholder={config.placeholder}
-                                            height="280px"
-                                        />
+                                        {config.isMermaid ? (
+                                            <div className="space-y-3">
+                                                {/* Mermaid редактор как обычный текст */}
+                                                <div className="relative">
+                                                    <Label className="text-xs text-muted-foreground mb-1 block">
+                                                        Mermaid синтаксисі
+                                                    </Label>
+                                                    <Textarea
+                                                        value={value}
+                                                        onChange={(e) => updateField(key, e.target.value)}
+                                                        placeholder={config.placeholder}
+                                                        className="font-mono text-sm min-h-[200px]"
+                                                    />
+                                                    <div className="absolute top-8 right-2 flex gap-1">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-8 px-2"
+                                                            onClick={() => setPreviewOpen(true)}
+                                                            disabled={!value.trim()}
+                                                        >
+                                                            <Eye size={14} className="mr-1" />
+                                                            Көрсету
+                                                        </Button>
+                                                        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                                                            <DialogTrigger asChild>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-8 px-2"
+                                                                    disabled={!value.trim()}
+                                                                >
+                                                                    <Maximize2 size={14} />
+                                                                </Button>
+                                                            </DialogTrigger>
+                                                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                                                <DialogHeader>
+                                                                    <DialogTitle>Mermaid Диаграмма</DialogTitle>
+                                                                </DialogHeader>
+                                                                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                                                                    <Mermaid
+                                                                        chart={value}
+                                                                        onError={handleDiagramError}
+                                                                    />
+                                                                    {diagramError && (
+                                                                        <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                                                                            <AlertTriangle size={14} className="inline mr-2" />
+                                                                            {diagramError}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-4">
+                                                                    <Label className="text-xs text-muted-foreground">Код:</Label>
+                                                                    <pre className="mt-1 p-3 bg-muted rounded-md text-xs overflow-x-auto">
+                                                                        <code>{value}</code>
+                                                                    </pre>
+                                                                </div>
+                                                            </DialogContent>
+                                                        </Dialog>
+                                                    </div>
+                                                </div>
+
+                                                {/* Живое превью */}
+                                                {value.trim() && (
+                                                    <div className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/50">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <Label className="text-sm font-medium flex items-center gap-2">
+                                                                <Eye size={14} />
+                                                                Алдын ала қарау
+                                                            </Label>
+                                                            <Badge variant="outline" className="text-xs">
+                                                                Mermaid
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="min-h-[200px] flex items-center justify-center">
+                                                            <Mermaid
+                                                                chart={value}
+                                                                onError={handleDiagramError}
+                                                            />
+                                                        </div>
+                                                        {diagramError && (
+                                                            <div className="mt-3 p-2 bg-destructive/10 text-destructive rounded-md text-xs">
+                                                                <AlertTriangle size={12} className="inline mr-1" />
+                                                                {diagramError}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Подсказка по синтаксису */}
+                                                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+                                                    <div className="font-medium mb-1 flex items-center gap-1">
+                                                        <Code size={12} />
+                                                        Mermaid синтаксисі мысалы:
+                                                    </div>
+                                                    <pre className="mt-1 font-mono text-xs">
+{`graph TD
+    A[Бастау] --> B{Шешім қабылдау}
+    B -->|Иә| C[Нәтиже 1]
+    B -->|Жоқ| D[Нәтиже 2]
+    C --> E[Аяқтау]
+    D --> E`}
+                                                    </pre>
+                                                    <div className="mt-2">
+                                                        <a
+                                                            href="https://mermaid.js.org/syntax/"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-primary hover:underline"
+                                                        >
+                                                            Толық документация →
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <MilkdownEditor
+                                                value={value}
+                                                onChange={(v) => updateField(key, v)}
+                                                placeholder={config.placeholder}
+                                                height="280px"
+                                            />
+                                        )}
                                     </div>
                                 )}
                             </div>

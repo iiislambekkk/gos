@@ -70,6 +70,7 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
+  password      String? // добавляем поле для пароля (опционально для Google OAuth)
   emailVerified DateTime?
   image         String?
   role          Role      @default(USER)

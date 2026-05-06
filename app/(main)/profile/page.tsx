@@ -40,7 +40,8 @@ export default function ProfilePage() {
         .toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
 
     return (
-        <div className="container max-w-4xl mx-auto py-8 px-4">
+        <div className="h-full overflow-y-auto">
+            <div className="container max-w-4xl mx-auto py-8 px-4">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold">Профиль</h1>
                 <p className="text-muted-foreground mt-1">
@@ -176,6 +177,7 @@ export default function ProfilePage() {
                     </CardContent>
                 </Card>
             </div>
+        </div>
         </div>
     );
 }

@@ -2,25 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {BookOpen, LayoutDashboard, User, Menu, Shield} from "lucide-react";
+import { BookOpen, LayoutDashboard, User, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-    Sheet,
-    SheetContent,
-    SheetTrigger,
-} from "@/components/ui/sheet";
-import {DropdownMenuItem} from "@/components/ui/dropdown-menu";
-import {useUserRole} from "@/hooks/useUserRole";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const links = [
-    { href: "/",        label: "Главная",  icon: LayoutDashboard },
-    { href: "/profile", label: "Профиль",  icon: User },
+    { href: "/", label: "Главная", icon: LayoutDashboard },
+    { href: "/profile", label: "Профиль", icon: User },
 ];
 
+// Десктопный сайдбар (без изменений)
 function SidebarContent() {
     const pathname = usePathname();
-    const { isAdmin } = useUserRole(); // role === "ADMIN"
+    const { isAdmin } = useUserRole();
 
     return (
         <div className="flex flex-col gap-1 p-3 h-full">
@@ -45,15 +39,17 @@ function SidebarContent() {
                 </Link>
             ))}
 
-            {/* Админ панель - для ADMIN роли */}
             {isAdmin && (
-                <Link href={"/admin/exams"}  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                    pathname === "/admin/exams"
-                        ? "bg-accent text-accent-foreground font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                )}>
-                    <Shield size={14} className="mr-2" />
+                <Link
+                    href="/admin/exams"
+                    className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                        pathname === "/admin/exams"
+                            ? "bg-accent text-accent-foreground font-medium"
+                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    )}
+                >
+                    <Shield size={16} />
                     Админ панель
                 </Link>
             )}
@@ -61,7 +57,7 @@ function SidebarContent() {
     );
 }
 
-// десктоп версия
+// Десктопная версия
 export function Sidebar() {
     return (
         <aside className="hidden md:flex w-56 border-r flex-col">
@@ -70,18 +66,37 @@ export function Sidebar() {
     );
 }
 
-// кнопка для мобила (вставляется в Navbar)
-export function MobileSidebar() {
+// Мобильное нижнее меню
+export function MobileBottomNav() {
+    const pathname = usePathname();
+    const { isAdmin } = useUserRole();
+
+    const mobileLinks = isAdmin
+        ? [...links, { href: "/admin/exams", label: "Админ", icon: Shield }]
+        : links;
+
     return (
-        <Sheet>
-            <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                    <Menu size={20} />
-                </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-56">
-                <SidebarContent />
-            </SheetContent>
-        </Sheet>
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
+            <div className="flex items-center justify-around h-14">
+                {mobileLinks.map(({ href, label, icon: Icon }) => {
+                    const isActive = pathname === href;
+                    return (
+                        <Link
+                            key={href}
+                            href={href}
+                            className={cn(
+                                "flex flex-col items-center justify-center gap-0.5 h-full w-full transition-colors",
+                                isActive
+                                    ? "text-primary"
+                                    : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Icon size={18} />
+                            <span className="text-[10px] leading-none">{label}</span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </nav>
     );
 }

@@ -3,6 +3,7 @@ import { Geist, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../components/providers/providers";
 import { cn } from "@/lib/utils";
+import {MobileBottomNav} from "@/components/sidebar";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -21,7 +22,9 @@ export default function RootLayout({
     return (
         <html lang="ru" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
         <body className={geist.className}>
-        <Providers>{children}</Providers>
+        <Providers>{children}
+            <MobileBottomNav />
+        </Providers>
         </body>
         </html>
     );
