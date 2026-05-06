@@ -221,14 +221,16 @@ function MusicPlayer({ onClose }: { onClose: () => void }) {
 
                         <span className="text-[10px] text-muted-foreground font-mono">{fmt(currentTime)}</span>
 
-                        <input
-                            type="range" min={0} max={duration || 0} step={0.1}
-                            value={currentTime} onChange={handleSeek}
-                            className="flex-1 h-0.5 rounded-full appearance-none cursor-pointer accent-primary"
-                            style={{
-                                background: `linear-gradient(to right, hsl(var(--primary)) ${pct}%, hsl(var(--muted)) ${pct}%)`
-                            }}
-                        />
+                        <div className="relative flex-1 flex items-center">
+                            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-primary transition-none" style={{ width: `${pct}%` }} />
+                            </div>
+                            <input
+                                type="range" min={0} max={duration || 0} step={0.1}
+                                value={currentTime} onChange={handleSeek}
+                                className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                            />
+                        </div>
 
                         <span className="text-[10px] text-muted-foreground font-mono">{fmt(duration)}</span>
                     </div>
@@ -236,33 +238,48 @@ function MusicPlayer({ onClose }: { onClose: () => void }) {
                     {/* Громкость */}
                     <div className="flex items-center gap-2">
                         <Volume2 size={11} className="text-muted-foreground shrink-0"/>
-                        <input
-                            type="range" min={0} max={1} step={0.01}
-                            value={volume}
-                            onChange={e => setVolume(parseFloat(e.target.value))}
-                            className="flex-1 h-0.5 rounded-full appearance-none cursor-pointer"
-                            style={{
-                                background: `linear-gradient(to right, hsl(var(--primary)) ${volume * 100}%, hsl(var(--muted)) ${volume * 100}%)`
-                            }}
-                        />
+                        {/* Громкость — тоже h-1 */}
+                        <div className="relative flex-1 flex items-center">
+                            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full bg-primary transition-none" style={{ width: `${volume * 100}%` }} />
+                            </div>
+                            <input
+                                type="range" min={0} max={1} step={0.01}
+                                value={volume}
+                                onChange={e => setVolume(parseFloat(e.target.value))}
+                                className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                            />
+                        </div>
                         <span className="text-[10px] text-muted-foreground font-mono">{Math.round(volume * 100)}%</span>
                     </div>
                 </div>
             </div>
 
             <style>{`
-            @keyframes eq-bar {
-                from { transform: scaleY(0.4); }
-                to   { transform: scaleY(1); }
-            }
-            input[type="range"]::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                width: 8px; height: 8px;
-                border-radius: 50%;
-                background: hsl(var(--primary));
-                cursor: pointer;
-            }
-        `}</style>
+    @keyframes eq-bar {
+        from { transform: scaleY(0.4); }
+        to   { transform: scaleY(1); }
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        background: #6366f1;
+        cursor: pointer;
+        margin-top: -4px;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+        border-radius: 999px;
+        height: 4px;
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        background: #6366f1;
+        border: none;
+        cursor: pointer;
+    }
+`}</style>
         </div>
     );
 }
