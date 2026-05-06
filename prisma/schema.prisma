@@ -1,0 +1,376 @@
+// schema.prisma
+// PostgreSQL — Supabase (бесплатный план более чем достаточен)
+// Realtime чат — через Supabase Realtime JS клиент (не Prisma)
+// Push уведомления — через web-push + pushSubscription в БД
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // нужен для Supabase + Prisma migrations
+}
+
+// ─────────────────────────────────────────
+// NEXT AUTH — обязательные таблицы адаптера
+// ─────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────
+// ПОЛЬЗОВАТЕЛИ
+// ─────────────────────────────────────────
+
+enum Role {
+  USER // обычный студент
+  ADMIN // создаёт/редактирует экзамены, вопросы, ответы, мемы
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  lastOnlineAt  DateTime? // обновляется когда юзер отключается от Presence
+
+  // NextAuth
+  accounts Account[]
+  sessions Session[]
+
+  // Push уведомления
+  pushSubscriptions PushSubscription[]
+
+  // App
+  progress     UserProgress[]
+  streak       UserStreak?
+  achievements UserAchievement[]
+  examDates    UserExamDate[]
+  seenMemes    UserSeenMeme[]
+  comments     Comment[]
+  chatMessages ChatMessage[]
+  commentLikes CommentLike[]
+
+  @@map("users")
+}
+
+// Web Push подписки пользователя
+// (один юзер может быть подписан с нескольких устройств/браузеров)
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique // уникальный URL устройства
+  p256dh    String // ключ шифрования
+  auth      String // токен авторизации
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+// ─────────────────────────────────────────
+// ЭКЗАМЕНЫ
+// ─────────────────────────────────────────
+
+enum ExamType {
+  KNOWLEDGE_BASED // На знание фактов/определений
+  UNDERSTANDING_BASED // На понимание концепций
+  TASK_BASED // Практические задачи
+  MIXED // Смешанный
+}
+
+model Exam {
+  id          String   @id @default(cuid())
+  title       String // "Сети и протоколы", "ОС", "БД"...
+  description String?
+  type        ExamType @default(MIXED)
+  createdAt   DateTime @default(now())
+
+  questions    Question[]
+  examDates    UserExamDate[]
+  memes        Meme[]
+  chatMessages ChatMessage[] // чат привязан к экзамену
+
+  @@map("exams")
+}
+
+// Дата экзамена у конкретного пользователя
+// (у разных людей может быть разная дата одного и того же экзамена)
+model UserExamDate {
+  id     String   @id @default(cuid())
+  userId String
+  examId String
+  date   DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, examId])
+  @@map("user_exam_dates")
+}
+
+// ─────────────────────────────────────────
+// ВОПРОСЫ
+// ─────────────────────────────────────────
+
+enum QuestionCategory {
+  KNOWLEDGE // "Что такое X?"
+  UNDERSTANDING // "Как работает X? Почему?"
+  TASK // "Реши / напиши / разбери пример"
+}
+
+model Question {
+  id       String           @id @default(cuid())
+  examId   String
+  text     String
+  category QuestionCategory
+  order    Int
+
+  exam     Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answer   Answer?
+  progress UserProgress[]
+  comments Comment[]
+
+  @@unique([examId, order])
+  @@map("questions")
+}
+
+// ─────────────────────────────────────────
+// ОТВЕТЫ — 4 уровня + аналогия + схема
+// ─────────────────────────────────────────
+
+model Answer {
+  id         String @id @default(cuid())
+  questionId String @unique
+
+  summary String // превью в списке вопросов
+
+  // 4 уровня объяснения (Markdown)
+  eli5       String // 🧒 Как 5-летнему   — аналогии, ноль терминов
+  eli10      String // 🎒 Как школьнику   — просто, базовые понятия
+  eliStudent String // 🎓 Как студенту    — термины объяснены
+  eliExpert  String // 💼 Как специалисту — полный технический ответ
+
+  analogy String? // 🎭 Аналогия из жизни (отдельным блоком)
+  diagram String? // 🎨 ASCII / Mermaid схема (опционально)
+
+  updatedAt DateTime @updatedAt
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
+
+// ─────────────────────────────────────────
+// ПРОГРЕСС ПОЛЬЗОВАТЕЛЯ
+// ─────────────────────────────────────────
+
+enum ReadStatus {
+  NOT_SEEN // не открывал
+  SEEN // читал ответ
+  CONFIDENT // отметил "знаю это"
+}
+
+model UserProgress {
+  id         String     @id @default(cuid())
+  userId     String
+  questionId String
+  status     ReadStatus @default(NOT_SEEN)
+  updatedAt  DateTime   @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@map("user_progress")
+}
+
+// ─────────────────────────────────────────
+// STREAK — серия дней
+// ─────────────────────────────────────────
+
+model UserStreak {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  current    Int       @default(0) // текущая серия (дней)
+  longest    Int       @default(0) // личный рекорд
+  lastSeenAt DateTime? // последний день активности (для проверки сгорания)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_streaks")
+}
+
+// ─────────────────────────────────────────
+// АЧИВКИ
+// ─────────────────────────────────────────
+
+enum AchievementKey {
+  FIRST_STEP // открыл первый вопрос
+  FIVE_CONFIDENT // 5 вопросов CONFIDENT
+  QUARTER_DONE // 25% вопросов CONFIDENT
+  HALF_DONE // 50%
+  ALMOST_THERE // 75%
+  LEGEND // 100% вопросов CONFIDENT
+  STREAK_3 // streak 3 дня
+  STREAK_7 // streak 7 дней
+  STREAK_30 // streak 30 дней
+  PANIC_MODE // воспользовался режимом паники
+  NIGHT_OWL // учился после полуночи
+  EARLY_BIRD // учился до 7 утра
+  FIRST_COMMENT // оставил первый комментарий
+  SOCIAL // написал 10 сообщений в чате
+}
+
+model Achievement {
+  id          String         @id @default(cuid())
+  key         AchievementKey @unique
+  title       String // "Первый шаг"
+  description String // "Открыл первый вопрос"
+  emoji       String // "🎯"
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+// ─────────────────────────────────────────
+// МЕМЫ
+// ─────────────────────────────────────────
+
+model Meme {
+  id        String   @id @default(cuid())
+  examId    String? // привязан к конкретному экзамену или общий (null)
+  imageUrl  String
+  caption   String? // подпись под мемом
+  createdAt DateTime @default(now())
+
+  exam   Exam?          @relation(fields: [examId], references: [id], onDelete: SetNull)
+  seenBy UserSeenMeme[]
+
+  @@map("memes")
+}
+
+model UserSeenMeme {
+  id     String   @id @default(cuid())
+  userId String
+  memeId String
+  seenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meme Meme @relation(fields: [memeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, memeId])
+  @@map("user_seen_memes")
+}
+
+// ─────────────────────────────────────────
+// КОММЕНТАРИИ К ВОПРОСАМ
+// (обсуждение конкретного вопроса, дерево ответов)
+// ─────────────────────────────────────────
+
+model Comment {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  content    String
+  parentId   String? // null = корневой комментарий, иначе — ответ
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isDeleted  Boolean  @default(false) // мягкое удаление (чтобы не ломать дерево)
+
+  question Question      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[]     @relation("CommentReplies")
+  likes    CommentLike[]
+
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId]) // один лайк от одного юзера
+  @@map("comment_likes")
+}
+
+// ─────────────────────────────────────────
+// ЧАТ ЭКЗАМЕНА
+// (Supabase Realtime слушает эту таблицу и рассылает сообщения в реальном времени)
+// ─────────────────────────────────────────
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  examId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
