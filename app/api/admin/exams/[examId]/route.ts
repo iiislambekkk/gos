@@ -23,3 +23,30 @@ export async function PATCH(
         );
     }
 }
+
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: Promise<{ examId: string }> }
+) {
+    const { examId } = await params;
+
+    try {
+        // Сначала удаляем связанные вопросы (если есть)
+        await prisma.question.deleteMany({
+            where: { examId: examId },
+        });
+
+        // Потом удаляем сам экзамен
+        await prisma.exam.delete({
+            where: { id: examId },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Error deleting exam:", error);
+        return NextResponse.json(
+            { error: "Ошибка при удалении экзамена" },
+            { status: 500 }
+        );
+    }
+}

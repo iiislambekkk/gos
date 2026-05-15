@@ -1,3 +1,4 @@
+// app/admin/exams/page.tsx
 import { prisma } from "@/lib/prisma";
 import { ExamType } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +12,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { CreateExamDialog } from "@/components/admin/create-exam-dialog";
+import { DeleteExamDialog } from "@/components/admin/delete-exam-dialog"; // 👈 ИМПОРТ
 
 const examTypeLabel: Record<ExamType, string> = {
     KNOWLEDGE_BASED: "Знание",
@@ -40,7 +42,7 @@ export default async function AdminExamsPage() {
                         <TableHead>Название</TableHead>
                         <TableHead>Тип</TableHead>
                         <TableHead>Вопросов</TableHead>
-                        <TableHead className="w-16" />
+                        <TableHead className="w-24" /> {/* 👈 Увеличил ширину */}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -51,12 +53,14 @@ export default async function AdminExamsPage() {
                                 <Badge variant="secondary">{examTypeLabel[exam.type]}</Badge>
                             </TableCell>
                             <TableCell>{exam._count.questions}</TableCell>
-                            <TableCell>
+                            <TableCell className="flex items-center gap-1">
                                 <Button variant="ghost" size="icon" asChild>
                                     <Link href={`/admin/exams/${exam.id}`}>
                                         <Pencil size={14} />
                                     </Link>
                                 </Button>
+                                {/* 👇 КНОПКА УДАЛЕНИЯ */}
+                                <DeleteExamDialog examId={exam.id} examTitle={exam.title} />
                             </TableCell>
                         </TableRow>
                     ))}

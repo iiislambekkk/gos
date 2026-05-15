@@ -2,6 +2,7 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
     Moon,
@@ -343,14 +344,58 @@ export function Navbar({ user }: NavbarProps) {
     const clickCount = useRef(0);
     const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleAvatarClick = (e: React.MouseEvent) => {
-        // Не открываем дропдаун если тройной клик
+    // Эффекты
+    const [clickNumber, setClickNumber] = useState(0);
+    const [showNumber, setShowNumber] = useState(false);
+    const [shake, setShake] = useState(false);
+    const [particles, setParticles] = useState<{ id: number; x: number; y: number; value: string }[]>([]);
+    const nameRef = useRef<HTMLSpanElement>(null);
+
+    const handleNameClick = (e: React.MouseEvent) => {
         clickCount.current += 1;
+        setClickNumber(clickCount.current);
+        setShowNumber(true);
+
+        // Эффект встряски
+        setShake(true);
+        setTimeout(() => setShake(false), 300);
+
+        // Анимация пульсации
+        if (nameRef.current) {
+            nameRef.current.style.transform = "scale(1.1)";
+            setTimeout(() => {
+                if (nameRef.current) nameRef.current.style.transform = "scale(1)";
+            }, 150);
+        }
+
+        // Создаем частицы с цифрами нажатий
+        const rect = nameRef.current?.getBoundingClientRect();
+        if (rect) {
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const newParticle = {
+                id: Date.now(),
+                x,
+                y,
+                value: `${clickCount.current}`,
+            };
+            setParticles(prev => [...prev, newParticle]);
+            setTimeout(() => {
+                setParticles(prev => prev.filter(p => p.id !== newParticle.id));
+            }, 800);
+        }
+
         if (clickTimer.current) clearTimeout(clickTimer.current);
-        clickTimer.current = setTimeout(() => { clickCount.current = 0; }, 600);
+        clickTimer.current = setTimeout(() => {
+            clickCount.current = 0;
+            setShowNumber(false);
+            setClickNumber(0);
+        }, 600);
 
         if (clickCount.current >= 3) {
             clickCount.current = 0;
+            setShowNumber(false);
+            setClickNumber(0);
             e.preventDefault();
             e.stopPropagation();
             setShowVideo(true);
@@ -368,9 +413,41 @@ export function Navbar({ user }: NavbarProps) {
             <header className="border-b h-14 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="hidden md:block" />
 
-                <span
-                    onClickCapture={handleAvatarClick}
-                    className="text-sm font-medium select-none">{user.name}</span>
+                <div className="relative">
+                    <span
+                        ref={nameRef}
+                        onClick={handleNameClick}
+                        className={`text-sm font-medium select-none relative cursor-pointer hover:text-primary transition-all inline-block px-2 py-1 rounded-md ${
+                            shake ? "animate-shake" : ""
+                        }`}
+                        style={{ transition: "transform 0.15s ease" }}
+                    >
+                        {user.name}
+
+                        {/* Основной счетчик кликов над именем */}
+                        {showNumber && clickNumber > 0 && (
+                            <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-white bg-primary px-2 py-0.5 rounded-full animate-fallDown z-10 whitespace-nowrap">
+                                {clickNumber} {clickNumber === 1 ? 'клик' : clickNumber <= 4 ? 'клика' : 'кликов'}
+                            </span>
+                        )}
+                    </span>
+
+                    {/* Летающие цифры-частицы */}
+                    {particles.map(particle => (
+                        <span
+                            key={particle.id}
+                            className="absolute text-primary font-bold text-sm animate-float"
+                            style={{
+                                left: particle.x,
+                                top: particle.y,
+                                pointerEvents: "none",
+                                zIndex: 100,
+                            }}
+                        >
+                            +{particle.value}
+                        </span>
+                    ))}
+                </div>
 
                 <div className="flex items-center gap-2">
                     <Button
@@ -383,7 +460,6 @@ export function Navbar({ user }: NavbarProps) {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            {/* onClickCapture — срабатывает до открытия дропдауна */}
                             <Avatar
                                 className="cursor-pointer h-8 w-8 hover:opacity-80 transition-opacity select-none"
                             >
@@ -424,7 +500,48 @@ export function Navbar({ user }: NavbarProps) {
             {showPlayer && <MusicPlayer onClose={() => setShowPlayer(false)} />}
             {showVideo && <VideoModal onClose={() => setShowVideo(false)} />}
 
-            <style>{`
+            <style jsx global>{`
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-3px); }
+                    75% { transform: translateX(3px); }
+                }
+                .animate-shake {
+                    animation: shake 0.2s ease-in-out;
+                }
+                @keyframes bounce {
+                    0%, 100% { transform: translateY(0); opacity: 1; }
+                    50% { transform: translateY(-8px); opacity: 0.8; }
+                }
+                .animate-fallDown {
+                    animation: fallDown 0.6s ease-out forwards;
+                }
+                .animate-bounce {
+                    animation: bounce 0.5s ease-in-out;
+                }
+                @keyframes float {
+                    0% {
+                        transform: translateY(0) translateX(0);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(40px) translateX(20px);
+                        opacity: 0;
+                    }
+                }
+                @keyframes fallDown {
+                    0% {
+                        transform: translateY(0) translateX(-50%);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(30px) translateX(-50%);
+                        opacity: 0;
+                    }
+                }
+                .animate-float {
+                    animation: float 0.8s ease-out forwards;
+                }
                 input[type="range"]::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     width: 10px; height: 10px;
