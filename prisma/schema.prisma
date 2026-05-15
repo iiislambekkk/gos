@@ -67,15 +67,16 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  password      String? // добавляем поле для пароля (опционально для Google OAuth)
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(USER)
-  createdAt     DateTime  @default(now())
-  lastOnlineAt  DateTime? // обновляется когда юзер отключается от Presence
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  aiAnswerSessions AIAnswerSession[]
+  password         String? // добавляем поле для пароля (опционально для Google OAuth)
+  emailVerified    DateTime?
+  image            String?
+  role             Role              @default(USER)
+  createdAt        DateTime          @default(now())
+  lastOnlineAt     DateTime? // обновляется когда юзер отключается от Presence
 
   // NextAuth
   accounts Account[]
@@ -164,16 +165,18 @@ enum QuestionCategory {
 }
 
 model Question {
-  id       String           @id @default(cuid())
-  examId   String
-  text     String
-  category QuestionCategory
-  order    Int
+  id         String           @id @default(cuid())
+  examId     String
+  text       String
+  category   QuestionCategory
+  order      Int
+  difficulty Int              @default(3)
 
-  exam     Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
-  answer   Answer?
-  progress UserProgress[]
-  comments Comment[]
+  exam             Exam              @relation(fields: [examId], references: [id], onDelete: Cascade)
+  answer           Answer?
+  progress         UserProgress[]
+  comments         Comment[]
+  aiAnswerSessions AIAnswerSession[]
 
   @@unique([examId, order])
   @@map("questions")
@@ -374,4 +377,56 @@ model ChatMessage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
+}
+
+// ─────────────────────────────────────────
+// ИИ РЕЖИМ — проверка ответов пользователя
+// ─────────────────────────────────────────
+
+enum ScoreLabel {
+  WEAK // < 40
+  OK // 40–69
+  GOOD // 70–84
+  EXCELLENT // 85–100
+}
+
+// Сессия = один вопрос, над которым юзер работает.
+// Внутри может быть несколько попыток (написал, получил фидбек, переписал).
+model AIAnswerSession {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attempts AIAnswerAttempt[]
+
+  @@unique([userId, questionId]) // одна сессия на пару юзер+вопрос
+  @@map("ai_answer_sessions")
+}
+
+// Одна попытка = один отправленный ответ + ответ ИИ
+model AIAnswerAttempt {
+  id            String @id @default(cuid())
+  sessionId     String
+  attemptNumber Int // 1, 2, 3... (порядок внутри сессии)
+
+  userAnswer String // что написал пользователь
+
+  // Фидбек от ИИ
+  aiFeedback   String // развёрнутый комментарий (Markdown)
+  score        Int // 0–100
+  scoreLabel   ScoreLabel
+  strengths    String[] // ["Правильно упомянул X", "Хорошо объяснил Y"]
+  improvements String[] // ["Не хватает Z", "Путаница с W"]
+  isPassing    Boolean // score >= 70
+
+  createdAt DateTime @default(now())
+
+  session AIAnswerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, attemptNumber])
+  @@map("ai_answer_attempts")
 }

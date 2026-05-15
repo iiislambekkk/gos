@@ -219,6 +219,30 @@ function MusicPlayer({ onClose }: { onClose: () => void }) {
                             <SkipForward size={13}/>
                         </button>
 
+
+
+                        {/* Громкость */}
+                        <div className="flex items-center gap-2 flex-1 ">
+                            <Volume2 size={11} className="text-muted-foreground shrink-0"/>
+                            {/* Громкость — тоже h-1 */}
+                            <div className="relative flex-1 flex items-center h-1 w-full">
+                                <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full bg-primary transition-none" style={{ width: `${volume * 100}%` }} />
+                                </div>
+                                <input
+                                    type="range" min={0} max={1} step={0.01}
+                                    value={volume}
+                                    onChange={e => setVolume(parseFloat(e.target.value))}
+                                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                                />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-mono">{Math.round(volume * 100)}%</span>
+                        </div>
+
+                    </div>
+
+
+                    <div className={"flex gap-4"}>
                         <span className="text-[10px] text-muted-foreground font-mono">{fmt(currentTime)}</span>
 
                         <div className="relative flex-1 flex items-center">
@@ -235,23 +259,9 @@ function MusicPlayer({ onClose }: { onClose: () => void }) {
                         <span className="text-[10px] text-muted-foreground font-mono">{fmt(duration)}</span>
                     </div>
 
-                    {/* Громкость */}
-                    <div className="flex items-center gap-2">
-                        <Volume2 size={11} className="text-muted-foreground shrink-0"/>
-                        {/* Громкость — тоже h-1 */}
-                        <div className="relative flex-1 flex items-center">
-                            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
-                                <div className="h-full bg-primary transition-none" style={{ width: `${volume * 100}%` }} />
-                            </div>
-                            <input
-                                type="range" min={0} max={1} step={0.01}
-                                value={volume}
-                                onChange={e => setVolume(parseFloat(e.target.value))}
-                                className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                            />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground font-mono">{Math.round(volume * 100)}%</span>
-                    </div>
+
+
+
                 </div>
             </div>
 

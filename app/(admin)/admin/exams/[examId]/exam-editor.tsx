@@ -78,6 +78,7 @@ export function ExamEditor({ exam }: { exam: ExamWithQuestions }) {
                     title: examTitle,
                     description: examDescription,
                     type: examType,
+                    examId: exam.id
                 }),
             });
             if (!res.ok) throw new Error();
@@ -135,7 +136,7 @@ export function ExamEditor({ exam }: { exam: ExamWithQuestions }) {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-6 h-full overflow-y-auto hide-scrollbar">
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <Button variant="outline" size="sm" asChild>

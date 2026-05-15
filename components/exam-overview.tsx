@@ -59,7 +59,7 @@ export function ExamOverview({ exam, questions, examDate }: Props) {
     const startIdx = firstUnseen ? questions.indexOf(firstUnseen) : 0;
 
     return (
-        <div className="min-h-screen bg-background pb-20">
+        <div className="h-screen bg-background pb-20 overflow-y-auto">
             <div className="max-w-2xl mx-auto px-4">
                 {/* ── Навигация ── */}
                 <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-3 -mx-4 px-4 border-b">
@@ -153,7 +153,7 @@ export function ExamOverview({ exam, questions, examDate }: Props) {
                                     <div className={cn("rounded-xl border p-4 flex gap-3 items-start active:scale-[0.98] transition-all", bg)}>
                                         <div className="flex flex-col items-center gap-1 pt-0.5">
                                             <Icon size={18} className={color} />
-                                            <span className="text-[10px] text-muted-foreground font-mono">{q.order}</span>
+                                            <span className="text-[10px] text-muted-foreground font-mono">{q.order+1}</span>
                                         </div>
 
                                         <div className="flex-1 min-w-0">

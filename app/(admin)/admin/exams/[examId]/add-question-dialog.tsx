@@ -40,6 +40,7 @@ export function AddQuestionDialog({
     const [text, setText] = useState("");
     const [category, setCategory] = useState("KNOWLEDGE");
     const [summary, setSummary] = useState("");
+    const [difficulty, setDifficulty] = useState(3);
 
     async function handleSubmit() {
         if (!text.trim()) return;
@@ -49,7 +50,7 @@ export function AddQuestionDialog({
             const res = await fetch(`/api/admin/exams/${examId}/questions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, category, summary }),
+                body: JSON.stringify({ text, category, summary, difficulty }),
             });
 
             if (!res.ok) throw new Error();
@@ -61,6 +62,7 @@ export function AddQuestionDialog({
             setText("");
             setCategory("KNOWLEDGE");
             setSummary("");
+            setDifficulty(3);
         } catch {
             toast.error("Ошибка при создании вопроса");
         } finally {
@@ -102,18 +104,36 @@ export function AddQuestionDialog({
                         />
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
-                        <Label>Категория</Label>
-                        <Select value={category} onValueChange={setCategory}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="KNOWLEDGE">Знание (Что такое X?)</SelectItem>
-                                <SelectItem value="UNDERSTANDING">Понимание (Как работает?)</SelectItem>
-                                <SelectItem value="TASK">Задача (Реши/напиши)</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <Label>Категория</Label>
+                            <Select value={category} onValueChange={setCategory}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="KNOWLEDGE">Знание (Что такое X?)</SelectItem>
+                                    <SelectItem value="UNDERSTANDING">Понимание (Как работает?)</SelectItem>
+                                    <SelectItem value="TASK">Задача (Реши/напиши)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <Label>Сложность (1-5)</Label>
+                            <Select value={difficulty.toString()} onValueChange={(v) => setDifficulty(parseInt(v))}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">⭐ Очень легко</SelectItem>
+                                    <SelectItem value="2">⭐⭐ Легко</SelectItem>
+                                    <SelectItem value="3">⭐⭐⭐ Средне</SelectItem>
+                                    <SelectItem value="4">⭐⭐⭐⭐ Сложно</SelectItem>
+                                    <SelectItem value="5">⭐⭐⭐⭐⭐ Очень сложно</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
 

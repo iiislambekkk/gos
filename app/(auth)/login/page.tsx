@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Link from "next/link";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -119,9 +120,9 @@ export default function LoginPage() {
                 <CardFooter className="flex flex-col space-y-2">
                     <p className="text-sm text-muted-foreground text-center">
                         Нет аккаунта?{" "}
-                        <Button variant="link" className="p-0 h-auto" onClick={() => router.push("/register")}>
+                        <Link className="p-0 h-auto hover:text-primary" href={"/register"}>
                             Зарегистрироваться
-                        </Button>
+                        </Link>
                     </p>
                 </CardFooter>
             </Card>

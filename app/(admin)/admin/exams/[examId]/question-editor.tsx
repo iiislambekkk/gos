@@ -1,6 +1,7 @@
+// app/(admin)/admin/exams/[examId]/question-editor.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Question, Answer } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,7 @@ export function QuestionEditor({
 }) {
     const [questionText, setQuestionText]       = useState(question.text);
     const [category, setCategory]               = useState(question.category);
+    const [difficulty, setDifficulty]           = useState(question.difficulty);
     const [fields, setFields]                   = useState({
         summary:    question.answer?.summary    || "",
         eli5:       question.answer?.eli5       || "",
@@ -93,7 +95,12 @@ export function QuestionEditor({
             const res = await fetch(`/api/admin/exams/${examId}/questions/${question.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: questionText, category, ...fields }),
+                body: JSON.stringify({
+                    text: questionText,
+                    category,
+                    difficulty,
+                    ...fields
+                }),
             });
             if (!res.ok) throw new Error();
             const updated = await res.json();
@@ -110,9 +117,19 @@ export function QuestionEditor({
         setDiagramError(error);
     };
 
+    const getDifficultyColor = (level: number) => {
+        if (level <= 2) return "text-green-600 bg-green-50 dark:bg-green-950/30";
+        if (level <= 3) return "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30";
+        return "text-red-600 bg-red-50 dark:bg-red-950/30";
+    };
+
+    const getDifficultyStars = (level: number) => {
+        return "⭐".repeat(level) + "☆".repeat(5 - level);
+    };
+
     return (
-        <div className="space-y-6">
-            {/* Question + Category */}
+        <div className="space-y-6  overflow-y-scroll  hide-scrollbar h-[400px]">
+            {/* Question + Category + Difficulty */}
             <div className="flex flex-col gap-4 md:flex-row md:gap-6">
                 <div className="flex-1 space-y-2">
                     <Label>Сұрақ мәтіні</Label>
@@ -123,7 +140,7 @@ export function QuestionEditor({
                         height="150px"
                     />
                 </div>
-                <div className="w-48 space-y-2">
+                <div className="w-60 space-y-2">
                     <Label>Категория</Label>
                     <Select value={category} onValueChange={setCategory}>
                         <SelectTrigger>
@@ -135,6 +152,26 @@ export function QuestionEditor({
                             <SelectItem value="TASK">Есеп</SelectItem>
                         </SelectContent>
                     </Select>
+
+                    <Label>Сложность</Label>
+                    <Select value={difficulty.toString()} onValueChange={(v) => setDifficulty(parseInt(v))}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="1">⭐ Очень легко</SelectItem>
+                            <SelectItem value="2">⭐⭐ Легко</SelectItem>
+                            <SelectItem value="3">⭐⭐⭐ Средне</SelectItem>
+                            <SelectItem value="4">⭐⭐⭐⭐ Сложно</SelectItem>
+                            <SelectItem value="5">⭐⭐⭐⭐⭐ Очень сложно</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {/* Difficulty badge */}
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${getDifficultyColor(difficulty)}`}>
+                        <span>{getDifficultyStars(difficulty)}</span>
+                        <span>({difficulty}/5)</span>
+                    </div>
 
                     {/* Stats */}
                     <div className="pt-2 space-y-1">

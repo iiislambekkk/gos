@@ -8,9 +8,10 @@ export async function PATCH(
 ) {
     try {
         const { title, description, type } = await req.json();
+        const {examId} = await params
 
         const exam = await prisma.exam.update({
-            where: { id: params.examId },
+            where: { id: examId },
             data: { title, description, type },
         });
 

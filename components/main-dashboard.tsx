@@ -267,7 +267,7 @@ export function MainDashboard({ user, exams, streak, upcomingExam, totalQuestion
                 <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
                     Экзамены
                 </h2>
-                <div className="space-y-3">
+                <div className="space-y-4 flex flex-col gap-3">
                     {exams.map((exam) => {
                         const percent = exam.total > 0 ? Math.round((exam.confident / exam.total) * 100) : 0;
                         const days = daysLeft(exam.examDate);

@@ -6,17 +6,18 @@ export async function PATCH(
     req: NextRequest,
     { params }: { params: Promise<{ examId: string; questionId: string }> }
 ) {
-    const { questionId } = await params;
+    const { examId, questionId } = await params;
 
     try {
         const body = await req.json();
-        const { text, category, order } = body;
+        const { text, category, difficulty, order } = body;
 
         const question = await prisma.question.update({
             where: { id: questionId },
             data: {
                 ...(text !== undefined && { text }),
                 ...(category !== undefined && { category }),
+                ...(difficulty !== undefined && { difficulty }),
                 ...(order !== undefined && { order }),
                 answer: {
                     upsert: {
