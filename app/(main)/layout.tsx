@@ -12,7 +12,6 @@ export default async function AdminLayout({
     const session = await getServerSession(authOptions);
 
     if (!session) redirect("/login");
-    if (session.user.role !== "ADMIN") redirect("/");
 
     return  <div className="flex h-screen overflow-hidden">
         <Sidebar />

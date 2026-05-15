@@ -23,22 +23,12 @@ export default async function RootLayout({
                                    }: {
     children: React.ReactNode;
 }) {
-    const session = await getServerSession(authOptions);
-    if (!session) redirect("/login");
 
     return (
         <html lang="ru" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
         <body className={geist.className}>
         <Providers>
-            <div className="flex h-screen overflow-hidden">
-                <Sidebar />
-                <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-                    <Navbar user={session.user} />
-                    <main className="flex-1 overflow-hidden">
-                        {children}
-                    </main>
-                </div>
-            </div>
+            {children}
 
             <MobileBottomNav />
         </Providers>
