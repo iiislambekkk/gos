@@ -368,14 +368,15 @@ export function Navbar({ user }: NavbarProps) {
             <header className="border-b h-14 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="hidden md:block" />
 
-                <span className="text-sm font-medium">{user.name}</span>
+                <span
+                    onClickCapture={handleAvatarClick}
+                    className="text-sm font-medium select-none">{user.name}</span>
 
                 <div className="flex items-center gap-2">
                     <Button
                         variant="ghost" size="icon"
                         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                         className="rounded-full"
-                        onClickCapture={handleAvatarClick}
                     >
                         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
                     </Button>
@@ -385,7 +386,6 @@ export function Navbar({ user }: NavbarProps) {
                             {/* onClickCapture — срабатывает до открытия дропдауна */}
                             <Avatar
                                 className="cursor-pointer h-8 w-8 hover:opacity-80 transition-opacity select-none"
-                                onClickCapture={handleAvatarClick}
                             >
                                 <AvatarImage src={user.image ?? ""} />
                                 <AvatarFallback className="bg-primary/10 text-primary text-xs">

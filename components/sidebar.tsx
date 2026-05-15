@@ -71,7 +71,7 @@ export function MobileBottomNav() {
     const pathname = usePathname();
     const { isAdmin } = useUserRole();
 
-    if (pathname === "/login") return null
+    if (pathname === "/login" || pathname === "/register" ) return null
 
     const mobileLinks = isAdmin
         ? [...links, { href: "/admin/exams", label: "Админ", icon: Shield }]
